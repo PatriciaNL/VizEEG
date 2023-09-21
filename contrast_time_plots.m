@@ -32,15 +32,14 @@ nSamps = 4200; % total samples for a single trial
 Fx = 2; %%%%%%%%%%%%%%%%% F1 = 1.5 Hz, F2 = 2 Hz %%%%%%%%%%%%%%%%%%%%%%%%
 % math to find samps per cycle of a frequency
 BinTimeinSecs = 2 ; % bin duration in seconds
+NumBins = 5; % number of bins
 TotalSampsPerDur = DAQ * BinTimeinSecs; % total samples per bin
 SampsPerSingleCycle = DAQ / Fx; % # of samples for a single freq cycle
 NumCycles = (TotalSampsPerDur / SampsPerSingleCycle) * 2; % #cycles per bin
 % number of samples and arrays to use for indexing
 NumSamps = TotalSampsPerDur / NumCycles ; % # of samples for 1 cycle dur
-%bin_end = NumSamps : NumSamps : nSamps; % end index 4 total bins per trial
-%bin_init = bin_end - (NumSamps - 1); % start index
 % set new empty data dims
-NumRows = (nSamps/5) / NumSamps; % rows 2 account 4 each binned time array
+NumRows = (nSamps/NumBins) / NumSamps; % rows 2 account 4 each binned time array
 cycle_data = zeros(NumRows,NumSamps,size(EOI,2)); % empty data matrix
 %legend_hands = {'pre','post'};
 %%
@@ -56,7 +55,7 @@ for bin = 1:size(BinInd,2) % iterate for all 5 contrast increments
         data = load(fullFilePath); % import file with that name
         % data is indexed as 1 bin interval (2s)
         eeg_data = data.subjEEG{cond}(BinInit(bin):BinInd(bin),:,:);
-        subplot(5,9,counter) % plot
+        subplot(NumBins,size(fileNames,2),counter) % plot
         counter = counter + 1;
             for trial_ind = 1:NumEps % binned data within this t interval            
                 data_ind = mean(eeg_data(:,EOI,T1(trial_ind):T2(trial_ind)),3,'omitnan');     
