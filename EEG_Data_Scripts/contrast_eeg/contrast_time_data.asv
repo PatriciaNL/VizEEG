@@ -1,0 +1,80 @@
+%% set eeg data dir and function dir
+%clear
+%clc
+SourceEEG_dir = 'D:\contrast_task_res\MAT';
+FuncsDir = 'C:\Users\inapi\sweep_data_a' ;
+addpath(SourceEEG_dir)
+addpath(FuncsDir)
+cd(SourceEEG_dir) % set working directory
+disp(pwd)
+%% get subj names
+fileList = dir(SourceEEG_dir); % lists files and folder
+fileNames = {};
+for i = 1:numel(fileList)
+    % Check if the item is a file (not a directory)
+    if ~fileList(i).isdir
+        % Get the file name and add it to the cell array
+        fileNames{end+1} = fileList(i).name;
+    end
+end
+fileNames = sort(fileNames);
+%% %% import data and place into cells 
+c = cell(1,3);
+for subs = 1:size(fileNames,2) % all subjects 
+    fullFilePath = fileNames{subs}; % subject file name
+    data = load(fullFilePath); % import file with that name
+    c{1} = data.subjEEG{1};
+    c{2} = data.subjEEG{2};
+    c{3} = data.subjEEG{3};
+end 
+[nSamps, nChans, ~] = size(c{1});
+%% params
+NumConds = 3;
+NumEps = 3; % # times we want to analyze data in pre / post manner
+T1 = [1,6,11] ;
+T2 = [5, 10, 15];
+EOI = 70:1:80; % electrodes to average over
+DAQ = 420;
+Fx = 3; %%%%%%%%%%%%%%%%% F1 = 3 Hz, F2 = 3.75 Hz %%%%%%%%%%%%%%%%%%%%%%%%%
+% math to find samps per cycle of a frequency
+TimeinSecs = 1 + 1/3; %1.3 second duration
+TotalSampsPerDur = DAQ * TimeinSecs; 
+SampsPerSingleCycle = DAQ / Fx;
+NumCycles = (TotalSampsPerDur / SampsPerSingleCycle) * 2;
+% number of samples and arrays to use for indexing
+NumSamps = TotalSampsPerDur / NumCycles ; 
+bin_end = NumSamps : NumSamps : nSamps; 
+bin_init = bin_end - (NumSamps - 1);
+% data array params
+Numrows = nSamps / NumSamps;
+cycle_data = zeros(Numrows,NumSamps,size(EOI,2));
+yMax = 1 * 10^(-6);
+yMin = -2 * 10^(-6);
+legend_hands = {'T 1-5','T 6-10','T 11-15'};
+%%
+counter = 1;
+for condition = 1:NumConds
+    subplot(3,size(fileNames,2),counter)
+    counter = counter + 1;
+    legend_data = cell(NumEps, 1);
+    for trial_ind = 1:NumEps
+        data_ind = mean(c{condition}(:,EOI,T1(trial_ind):T2(trial_ind)),3,'omitnan');
+        for row = 1:Numrows
+            cycle_data(row,:,:) = data_ind(bin_init(row):bin_end(row),:) ;
+        end
+    erp = mean(mean(cycle_data,1,'omitnan'),3);
+    plot(erp, 'LineWidth', 3)
+    hold on;
+    legend_data{trial_ind} = legend_hands{trial_ind};
+
+    yline(0, 'k--', 'Zero Line', 'LineWidth', 2);
+    grid on; hold on; box off;
+    titleString = [num2str(Fx), ' Hz ERP, Cond:', num2str(condition)];
+    title(titleString)
+    xlabel('1 Freq Cycle'); ylabel('Amplitude (mV)');
+    ylim([yMin,yMax]);
+    set(gcf,'color','w')
+    shg
+    end
+    hold off;
+end
